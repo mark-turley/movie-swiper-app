@@ -1,35 +1,15 @@
-# Movie Swiper App
+# Movie Swiper App - Backend
 
-A web application that helps couples decide on a movie to watch. Users are presented with a "Tinder-like" swiping interface to rate movies, and the app uses a machine learning model to generate personalized recommendations. When two users form a "couple" in the app, it finds and displays the movies they're both likely to enjoy.
+This repository contains the backend infrastructure for the Movie Swiper application, built with Supabase. It includes the database schema and the Edge Functions required to power the frontend.
 
-## Tech Stack
+## Architecture
 
-*   **Frontend:** React (to be added)
-*   **Backend:** [Supabase](https://supabase.io/)
-    *   **Database:** Supabase Postgres
-    *   **Authentication:** Supabase Auth
-    *   **Serverless Functions:** Supabase Edge Functions
-*   **Machine Learning:** Python (scikit-learn, pandas) - (to be added)
-*   **Movie Data:** [The Movie Database (TMDb) API](https://www.themoviedb.org/documentation/api)
+This project follows a polyrepo architecture, separating the backend from the frontend for clarity and independent development.
 
-## Project Structure
+*   **Backend:** This repository (`mark-turley/movie-swiper-app`). It manages the Supabase database and server-side logic (Edge Functions).
+*   **Frontend:** The frontend is a React application built and hosted with Lovable. The code for the frontend is located in a separate repository: [mark-turley/cine-swipe-quest](https://github.com/mark-turley/cine-swipe-quest).
 
-```
-.
-├── frontend/         # React app (to be added)
-├── ml/               # Python code for the ML recommendation model (to be added)
-└── supabase/
-    ├── migrations/   # Supabase database migrations
-    └── functions/    # Supabase edge functions (to be added)
-```
+## Edge Functions
 
-## Getting Started
-
-1.  **Set up Supabase:** Create a new project on [Supabase](https://supabase.com/).
-2.  **Link Project:** Link your Supabase project to the `movie-swiper-app` GitHub repository.
-3.  **Apply Migrations:** Apply the database migrations located in the `supabase/migrations` directory.
-4.  **Get API Keys:**
-    *   Add your Supabase Project URL and `anon` key as secrets to your frontend environment.
-    *   Sign up for an API key from [The Movie Database (TMDb)](https://www.themoviedb.org/documentation/api) and store it securely in Supabase.
-5.  **Develop Frontend:** Add your React application code to the `frontend/` directory.
-6.  **Develop ML Model:** Add the Python scripts for the recommendation model to the `ml/` directory.
+*   `/supabase/functions/fetch-popular-movies`: Fetches the latest popular movies from the TMDb API, caches them in the `movies` table, and returns them to the client.
+*   `/supabase/functions/add-swipe`: Records a user's swipe action (`like` or `dislike`) in the `swipes` table.
