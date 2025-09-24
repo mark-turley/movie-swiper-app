@@ -6,7 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Admin client for privileged operations
 const createAdminClient = () => {
   return createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
@@ -20,38 +19,50 @@ serve(async (req) => {
   }
 
   try {
-    const { pagesToFetch = 10 } = await req.json(); // Default to 10 pages if not specified
+    const { pagesToFetch = 10 } = await req.json(); // Default to 10 pages
     const supabaseAdmin = createAdminClient();
     const tmdbApiKey = Deno.env.get("TMDB_API_KEY");
 
     if (!tmdbApiKey) {
-      throw new Error("TMDB_API_KEY is not set in environment variables.");
+      throw new Error("TMDB_API_KEY is not set.");
     }
 
     let totalMoviesProcessed = 0;
 
-    // Loop through the specified number of pages from TMDb
     for (let page = 1; page <= pagesToFetch; page++) {
-      console.log(`Fetching page ${page} of ${pagesToFetch}...`);
-      const tmdbResponse = await fetch(
+      console.log(`Fetching page ${page} of ${pagesToFetch} from popular movies...`);
+      const listResponse = await fetch(
         `https://api.themoviedb.org/3/movie/popular?api_key=${tmdbApiKey}&language=en-US&page=${page}`
       );
+      if (!listResponse.ok) continue;
+      const listData = await listResponse.json();
 
-      if (!tmdbResponse.ok) {
-        console.error(`TMDb API request failed for page ${page}: ${tmdbResponse.statusText}`);
-        continue; // Skip this page on failure
+      // For each movie in the list, fetch its full details
+      const detailPromises = listData.results.map((movie: any) =>
+        fetch(`https://api.themoviedb.org/3/movie/${movie.id}?api_key=${tmdbApiKey}&language=en-US`)
+      );
+      const detailResponses = await Promise.all(detailPromises);
+
+      const moviesToInsert = [];
+      for (const res of detailResponses) {
+        if (res.ok) {
+          const movieDetail = await res.json();
+          moviesToInsert.push({
+            tmdb_id: movieDetail.id,
+            title: movieDetail.title,
+            overview: movieDetail.overview,
+            release_date: movieDetail.release_date,
+            poster_path: movieDetail.poster_path,
+            popularity: movieDetail.popularity,
+            genres: movieDetail.genres.map((g: any) => g.id), // Extract genre IDs
+            tagline: movieDetail.tagline,
+            vote_average: movieDetail.vote_average,
+            vote_count: movieDetail.vote_count,
+            runtime: movieDetail.runtime,
+            production_companies: movieDetail.production_companies.map((c: any) => c.name), // Extract company names
+          });
+        }
       }
-
-      const tmdbData = await tmdbResponse.json();
-      const moviesToInsert = tmdbData.results.map((movie: any) => ({
-        tmdb_id: movie.id,
-        title: movie.title,
-        overview: movie.overview,
-        release_date: movie.release_date,
-        poster_path: movie.poster_path,
-        popularity: movie.popularity,
-        genres: movie.genre_ids,
-      }));
 
       if (moviesToInsert.length > 0) {
         const { error, count } = await supabaseAdmin
